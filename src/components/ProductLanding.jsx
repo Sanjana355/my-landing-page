@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, Check, ArrowRight, Activity, ExternalLink } from 'lucide-react';
 import { PaintBucket, Palette } from 'lucide-react';
+import { Analytics } from "@vercel/analytics/react";
+import { track } from '@vercel/analytics';
 
 const ProductLanding = () => {
   const [showNotLaunched, setShowNotLaunched] = useState(false);
@@ -18,10 +20,7 @@ const ProductLanding = () => {
   useEffect(() => {
     const trackSessionDuration = () => {
       const duration = (Date.now() - sessionStartTime) / 1000; // Convert to seconds
-      // @ts-ignore
-      window.gtag('event', 'session_ended', { 
-        duration_seconds: duration 
-      });
+      track('session_ended', { duration_seconds: duration });
     };
 
     window.addEventListener('beforeunload', trackSessionDuration);
@@ -42,8 +41,7 @@ const ProductLanding = () => {
       if (now - lastTrackTime > 1000) {
         const scrollDifference = Math.abs(window.scrollY - lastScrollY);
         if (scrollDifference > scrollThreshold) {
-          // @ts-ignore
-          window.gtag('event', 'scroll', {
+          track('scroll', {
             scroll_depth: Math.round(window.scrollY),
             scroll_percentage: Math.round((window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100)
           });
@@ -66,14 +64,9 @@ const ProductLanding = () => {
     };
   };
 
-  const trackEvent = (eventName, params = {}) => {
-    // @ts-ignore
-    window.gtag('event', eventName, params);
-  };
-
   const CheckoutPage = () => {
     const handleCardInput = (field) => {
-      trackEvent('payment_input_attempt', { field });
+      track('payment_input_attempt', { field });
       setShowNotLaunched(true);
     };
 
@@ -132,7 +125,7 @@ const ProductLanding = () => {
             <Button 
               className="w-full"
               onClick={() => {
-                trackEvent('purchase_attempt');
+                track('purchase_attempt');
                 setShowNotLaunched(true);
               }}
             >
@@ -150,7 +143,7 @@ const ProductLanding = () => {
                 <Button 
                   className="w-full"
                   onClick={() => {
-                    trackEvent('return_to_homepage');
+                    track('return_to_homepage');
                     setShowNotLaunched(false);
                     setCheckoutStep(0);
                   }}
@@ -209,7 +202,6 @@ const ProductLanding = () => {
                 key={i}
                 className="bg-gray-50 p-6 rounded-xl shadow-lg transform transition-all duration-500 hover:scale-105"
                 style={getScrollAnimation(400 + i * 100)}
-                onClick={() => trackEvent('stat_card_click', { stat: item.stat })}
               >
                 <div className="text-4xl font-bold text-blue-600 mb-4">{item.stat}</div>
                 <p className="text-gray-600">{item.desc}</p>
@@ -309,7 +301,7 @@ const ProductLanding = () => {
               <Button 
                 className="w-full bg-blue-600 hover:bg-blue-700"
                 onClick={() => {
-                  trackEvent('pre_order_click');
+                  track('pre_order_click');
                   setCheckoutStep(1);
                 }}
               >
@@ -342,6 +334,7 @@ const ProductLanding = () => {
   return (
     <>
       {checkoutStep === 0 ? <MainContent /> : <CheckoutPage />}
+      <Analytics />
     </>
   );
 };
