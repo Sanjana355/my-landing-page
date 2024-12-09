@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Heart, Check, ArrowRight, Activity, ExternalLink } from 'lucide-react';
 import { PaintBucket, Palette } from 'lucide-react';
+import { Analytics } from "@vercel/analytics/react"
 
 
 const ProductLanding = () => {
