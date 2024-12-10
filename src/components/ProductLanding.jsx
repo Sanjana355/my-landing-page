@@ -1,341 +1,443 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Heart, Check, ArrowRight, Activity, ExternalLink } from 'lucide-react';
-import { PaintBucket, Palette } from 'lucide-react';
-import { Analytics } from "@vercel/analytics/react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Sparkles, Wand2, Layers } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import { track } from '@vercel/analytics';
+
+const MosaicBackground = () => {
+  const cellSize = 120;
+  const cols = Math.ceil(8000 / cellSize);
+  const rows = Math.ceil(4800 / cellSize);
+  
+  const colors = [
+    'rgb(255, 228, 215)',
+    'rgb(255, 218, 185)',
+    'rgb(255, 222, 173)',
+    'rgb(222, 184, 135)',
+    'rgb(205, 170, 125)',
+    'rgb(193, 154, 107)',
+    'rgb(160, 120, 90)',
+    'rgb(139, 100, 69)',
+    'rgb(111, 78, 55)'
+  ];
+
+  const cells = [];
+  
+  for (let row = -1; row < rows + 1; row++) {
+    for (let col = -1; col < cols + 1; col++) {
+      const centerX = col * cellSize * 0.8;
+      const centerY = row * cellSize * 0.8;
+      
+      const progress = (col + row/2) / (cols + rows/2);
+      const colorIndex = Math.min(Math.floor(progress * colors.length), colors.length - 1);
+      
+      const radius = (cellSize / 1.5) * (0.95 + Math.random() * 0.1);
+      
+      cells.push({
+        cx: centerX,
+        cy: centerY,
+        r: radius,
+        color: colors[colorIndex]
+      });
+    }
+  }
+
+  return (
+    <svg 
+      className="fixed top-0 left-0 w-[200vw] h-[200vh]"
+      viewBox="0 0 8000 4800" 
+      preserveAspectRatio="xMidYMid slice"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{
+        transform: 'translate(-25%, -25%)',
+        minWidth: '200vw',
+        minHeight: '200vh'
+      }}
+    >
+      <rect width="8000" height="4800" fill="white" />
+      {cells.map((cell, i) => (
+        <circle
+          key={i}
+          cx={cell.cx}
+          cy={cell.cy}
+          r={cell.r}
+          fill={cell.color}
+          opacity="0.8"
+        />
+      ))}
+    </svg>
+  );
+};
+
+const PaymentDialog = ({ open, onOpenChange, onReturnHome }) => {
+  const [showWaitlist, setShowWaitlist] = useState(false);
+  const [formData, setFormData] = useState({
+    cardNumber: '',
+    expiry: '',
+    cvc: ''
+  });
+
+  useEffect(() => {
+    if (showWaitlist) {
+      track('priority_list_shown');
+    }
+  }, [showWaitlist]);
+
+  const handleInputChange = (e) => {
+    if (e.target.name === 'cardNumber') {
+      setShowWaitlist(true);
+    }
+  };
+
+  const resetDialog = () => {
+    setShowWaitlist(false);
+    setFormData({
+      cardNumber: '',
+      expiry: '',
+      cvc: ''
+    });
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+    setTimeout(resetDialog, 300);
+    onReturnHome();
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        if (!newOpen) {
+          setTimeout(resetDialog, 300);
+        }
+        onOpenChange(newOpen);
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        {!showWaitlist ? (
+          <div className="p-6">
+            <h3 className="text-2xl font-bold mb-6 text-black">Complete Your Pre-order</h3>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Card Number
+                  </label>
+                  <input
+                    type="text"
+                    name="cardNumber"
+                    placeholder="1234 5678 9012 3456"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-black focus:border-transparent"
+                    onChange={handleInputChange}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Sparkles className="h-8 w-8 text-black" />
+            </div>
+            <h3 className="text-2xl font-bold mb-4 text-center text-black">Join Our Priority List</h3>
+            <p className="text-black mb-6 text-center">
+              Be the first to experience our revolutionary pulse oximeter. We're currently finalizing FDA approval and preparing for production.
+            </p>
+            <Button 
+              className="w-full bg-black text-white hover:bg-gray-800"
+              onClick={handleClose}
+            >
+              Return to Homepage
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const ProductLanding = () => {
   const [showNotLaunched, setShowNotLaunched] = useState(false);
-  const [email, setEmail] = useState('');
-  const [scrollY, setScrollY] = useState(0);
-  const [checkoutStep, setCheckoutStep] = useState(0);
-  const [sessionStartTime] = useState(Date.now());
+  const [currentPage, setCurrentPage] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const [animatedStats, setAnimatedStats] = useState([]);
+  const [pageLoadTime, setPageLoadTime] = useState(Date.now());
 
-  // Track session duration
   useEffect(() => {
-    const trackSessionDuration = () => {
-      const duration = (Date.now() - sessionStartTime) / 1000; // Convert to seconds
-      track('session_ended', { duration_seconds: duration });
-    };
-
-    window.addEventListener('beforeunload', trackSessionDuration);
-    return () => window.removeEventListener('beforeunload', trackSessionDuration);
-  }, [sessionStartTime]);
-
-  // Handle scroll effects and tracking
-  useEffect(() => {
-    let lastTrackTime = 0;
-    const scrollThreshold = 100;
-    let lastScrollY = 0;
-
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-      
-      // Track significant scroll events (throttled)
-      const now = Date.now();
-      if (now - lastTrackTime > 1000) {
-        const scrollDifference = Math.abs(window.scrollY - lastScrollY);
-        if (scrollDifference > scrollThreshold) {
-          track('scroll', {
-            scroll_depth: Math.round(window.scrollY),
-            scroll_percentage: Math.round((window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100)
-          });
-          lastTrackTime = now;
-          lastScrollY = window.scrollY;
+    setIsVisible(true);
+    const timer = setInterval(() => {
+      setAnimatedStats(prev => {
+        if (prev.length < 3) {
+          return [...prev, prev.length];
         }
-      }
-    };
+        clearInterval(timer);
+        return prev;
+      });
+    }, 200);
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    // Track initial page load
+    track('page_view', {
+      page: currentPage === 0 ? 'home' : 'technology'
+    });
 
-  // Utility function for scroll animations
-  const getScrollAnimation = (startPos) => {
-    const offset = Math.max(0, Math.min(1, (scrollY - startPos) / 500));
-    return {
-      opacity: offset,
-      transform: `translateY(${20 - (offset * 20)}px)`
+    // Reset page load time when page changes
+    setPageLoadTime(Date.now());
+
+    return () => {
+      // Track time spent on page when component unmounts or page changes
+      const timeSpent = (Date.now() - pageLoadTime) / 1000; // Convert to seconds
+      track('page_time', {
+        page: currentPage === 0 ? 'home' : 'technology',
+        timeSpent: timeSpent
+      });
+      clearInterval(timer);
     };
+  }, [currentPage]);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const CheckoutPage = () => {
-    const handleCardInput = (field) => {
-      track('payment_input_attempt', { field });
-      setShowNotLaunched(true);
-    };
-
-    return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold mb-6">Complete Your Purchase</h2>
-          
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h3 className="font-semibold mb-2">Order Summary</h3>
-            <div className="flex justify-between mb-2">
-              <span>Adaptive Pulse Oximeter</span>
-              <span>$19.99</span>
-            </div>
-            <div className="border-t pt-2 flex justify-between font-semibold">
-              <span>Total</span>
-              <span>$19.99</span>
-            </div>
-          </div>
-    
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="card">Card Number</Label>
-              <Input
-                id="card"
-                type="text"
-                placeholder="4242 4242 4242 4242"
-                onFocus={() => handleCardInput('card_number')}
-                className="cursor-not-allowed"
-              />
-            </div>
-    
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="expiry">Expiry</Label>
-                <Input
-                  id="expiry"
-                  type="text"
-                  placeholder="MM/YY"
-                  onFocus={() => handleCardInput('expiry')}
-                  className="cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <Label htmlFor="cvc">CVC</Label>
-                <Input
-                  id="cvc"
-                  type="text"
-                  placeholder="123"
-                  onFocus={() => handleCardInput('cvc')}
-                  className="cursor-not-allowed"
-                />
-              </div>
-            </div>
-    
-            <Button 
-              className="w-full"
-              onClick={() => {
-                track('purchase_attempt');
-                setShowNotLaunched(true);
-              }}
-            >
-              Complete Purchase
-            </Button>
-          </div>
-    
-          {showNotLaunched && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                <h3 className="text-xl font-bold mb-4">Coming Soon!</h3>
-                <p className="text-gray-600 mb-4">
-                  We're still in development and perfecting our technology. Join our waitlist to be first in line when we launch!
-                </p>
-                <Button 
-                  className="w-full"
-                  onClick={() => {
-                    track('return_to_homepage');
-                    setShowNotLaunched(false);
-                    setCheckoutStep(0);
-                  }}
-                >
-                  Return to Homepage
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  const handlePageTransition = () => {
+    track('button_click', {
+      button: 'learn_more'
+    });
+    setCurrentPage(1);
+    scrollToTop();
   };
 
-  const MainContent = () => (
-    <div className="min-h-screen bg-white overflow-x-hidden">
-      {/* Hero Section with Parallax */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <div 
-          className="absolute inset-0 bg-gradient-to-r from-blue-900 to-purple-900"
-          style={{
-            transform: `translateY(${scrollY * 0.5}px)`
-          }}
-        />
-        <div className="relative z-10 text-white text-center px-4">
-          <h1 className="text-5xl sm:text-6xl font-bold mb-8 animate-fade-in">
-            Redefining Pulse Oximetry
+  const handleReturnHome = () => {
+    setCurrentPage(0);
+    setAnimatedStats([]);
+    setTimeout(() => {
+      const timer = setInterval(() => {
+        setAnimatedStats(prev => {
+          if (prev.length < 3) {
+            return [...prev, prev.length];
+          }
+          clearInterval(timer);
+          return prev;
+        });
+      }, 200);
+    }, 100);
+    scrollToTop();
+  };
+
+  const stats = [
+    {
+      stat: "3x",
+      highlight: "Higher Risk",
+      desc: "Black patients are three times more likely to have their low oxygen levels missed by current devices"
+    },
+    {
+      stat: "11.7%",
+      highlight: "Critical Oversight",
+      desc: "Nearly 1 in 8 Black patients with normal-looking readings actually have concerning low oxygen levels"
+    },
+    {
+      stat: "3.56%",
+      highlight: "Measurement Gap",
+      desc: "Current devices can overestimate oxygen levels in dark skin tones, potentially delaying critical care"
+    }
+  ];
+
+  const HomePage = () => (
+    <div className="min-h-screen relative">
+      <div className="max-w-7xl mx-auto px-4 pt-20">
+        <div className="text-center mb-16">
+          <h1 
+            className="text-5xl sm:text-7xl font-bold leading-tight text-black"
+            style={{
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+              transition: 'all 1.2s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+          >
+            Precision for
+            <div className="text-black">
+              Every Patient
+            </div>
           </h1>
-          <p className="text-xl sm:text-2xl max-w-3xl mx-auto text-gray-200">
-            Accurate readings for every skin tone
+          <p 
+            className="text-xl text-black max-w-2xl mx-auto mt-6"
+            style={{
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+              transition: 'all 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s'
+            }}
+          >
+            The first pulse oximeter designed to provide precise readings across all skin tones, eliminating bias in critical care monitoring.
           </p>
+          <Button 
+            className="mt-8 bg-black text-white hover:bg-gray-800 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={handlePageTransition}
+            style={{
+              opacity: isVisible ? 1 : 0,
+              transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+              transition: 'all 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.4s'
+            }}
+          >
+            Learn More
+          </Button>
         </div>
-      </section>
 
-      {/* Statistics Section with Fade-in */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center space-y-8 mb-16">
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                stat: "3x",
-                desc: "Black patients are three times more likely to have dangerously low oxygen levels missed by current pulse oximeters"
-              },
-              {
-                stat: "11.7%",
-                desc: "Nearly 1 in 8 Black patients with normal-looking readings actually have concerning low oxygen levels"
-              },
-              {
-                stat: "3.56%",
-                desc: "Current devices can overestimate oxygen levels in dark skin tones, potentially delaying critical care"
-              }
-            ].map((item, i) => (
-              <div 
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 gap-8 mb-8">
+            {stats.slice(0, 2).map((item, i) => (
+              <div
                 key={i}
-                className="bg-gray-50 p-6 rounded-xl shadow-lg transform transition-all duration-500 hover:scale-105"
-                style={getScrollAnimation(400 + i * 100)}
+                className="transform transition-all duration-1000"
+                style={{
+                  opacity: animatedStats.includes(i) ? 1 : 0,
+                  transform: `translateX(${animatedStats.includes(i) ? '0' : (i === 0 ? '-100vw' : '100vw')})`,
+                  transition: 'all 1s ease-out'
+                }}
               >
-                <div className="text-4xl font-bold text-blue-600 mb-4">{item.stat}</div>
-                <p className="text-gray-600">{item.desc}</p>
+                <Card className="bg-white/80 backdrop-blur hover:shadow-lg transition-all duration-300 border-none">
+                  <div className="p-6">
+                    <div className="text-4xl font-bold text-black mb-2">
+                      {item.stat}
+                    </div>
+                    <h3 className="text-xl font-semibold text-black mb-1">{item.highlight}</h3>
+                    <p className="text-black">{item.desc}</p>
+                  </div>
+                </Card>
+              </div>
+            ))}
+          </div>
+          <div className="max-w-md mx-auto">
+            {stats.slice(2).map((item, i) => (
+              <div
+                key={i + 2}
+                className="transform transition-all duration-1000"
+                style={{
+                  opacity: animatedStats.includes(i + 2) ? 1 : 0,
+                  transform: `translateX(${animatedStats.includes(i + 2) ? '0' : '100vw'})`,
+                  transition: 'all 1s ease-out'
+                }}
+              >
+                <Card className="bg-white/80 backdrop-blur hover:shadow-lg transition-all duration-300 border-none">
+                  <div className="p-6">
+                    <div className="text-4xl font-bold text-black mb-2">
+                      {item.stat}
+                    </div>
+                    <h3 className="text-xl font-semibold text-black mb-1">{item.highlight}</h3>
+                    <p className="text-black">{item.desc}</p>
+                  </div>
+                </Card>
               </div>
             ))}
           </div>
         </div>
-      </section>
-
-      {/* Technology Explanation with Sliding Animations */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-16" style={getScrollAnimation(800)}>
-            Our Innovation
-          </h2>
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div 
-              className="space-y-8"
-              style={getScrollAnimation(900)}
-            >
-              <div className="flex items-start space-x-4">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <Activity className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Dual-Spectral Analysis</h3>
-                  <p className="text-gray-600">Traditional red and infrared light measurement combined with our advanced calibration system for superior accuracy and reliability in all skin tones</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Activity className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Optical Skin Tone Recognition</h3>
-                  <p className="text-gray-600">Dedicated optical sensor utilizing the Munsell value scale to deliver precise and consistent skin tone classification across diverse populations</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <PaintBucket className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Advanced Color Perception</h3>
-                  <p className="text-gray-600">Harnessing Munsell's perceptually uniform color space to achieve consistent and accurate color measurements across the full spectrum of skin tones</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <Activity className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Custom Calibration</h3>
-                  <p className="text-gray-600">Proprietary algorithms dynamically adapt measurements based on real-time skin tone detection, ensuring optimal accuracy for every individual</p>
-                </div>
-              </div>
-            </div>
-            <div 
-              className="grid grid-cols-3 gap-2 p-8 bg-white rounded-xl shadow-lg"
-              style={getScrollAnimation(1000)}
-            >
-              {['bg-[#FFDECB]', 'bg-[#E3B38C]', 'bg-[#C69776]', 'bg-[#A67852]', 'bg-[#865C3E]', 'bg-[#513127]'].map((color, i) => (
-                <div 
-                  key={i} 
-                  className={`h-24 rounded-lg transform transition-all duration-500 hover:scale-105 ${color}`}
-                  style={{
-                    transition: 'all 0.3s ease',
-                    transform: `translateY(${Math.sin((scrollY + i * 100) / 200) * 10}px)`
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pre-order Section with Float Animation */}
-      <section className="py-20 bg-gradient-to-b from-white to-blue-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Card 
-            className="max-w-md mx-auto transform hover:scale-105 transition-all duration-300"
-            style={{
-              animation: 'float 6s ease-in-out infinite',
-            }}
-          >
-            <CardContent className="p-6 space-y-4">
-              <h2 className="text-2xl font-bold">Be Part of the Change</h2>
-              <div className="text-3xl font-bold text-blue-600">$19.99</div>
-              <ul className="text-left space-y-2">
-                <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Triple-sensor technology</li>
-                <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Custom skin tone calibration</li>
-                <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Medical-grade accuracy</li>
-              </ul>
-              <Button 
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                onClick={() => {
-                  track('pre_order_click');
-                  setCheckoutStep(1);
-                }}
-              >
-                Pre-order Now <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <style jsx global>{`
-        @keyframes float {
-          0% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-          100% { transform: translateY(0px); }
-        }
-        
-        .animate-fade-in {
-          animation: fadeIn 1s ease-out;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+      </div>
     </div>
   );
 
+  const TechnologyPage = () => (
+    <div className="min-h-screen relative bg-white">
+      <div className="absolute inset-0 bg-white/90" />
+      <div className="relative max-w-7xl mx-auto px-4 pt-20">
+        <Button 
+          className="mb-12 bg-black text-white hover:bg-gray-800"
+          onClick={handleReturnHome}
+        >
+          ← Return to Homepage
+        </Button>
+
+        <div className="text-center mb-16">
+          <h2 className="text-5xl font-bold text-black mb-6">
+            Revolutionary
+            <span className="block text-black">
+              Technology
+            </span>
+          </h2>
+          <p className="text-xl text-black max-w-2xl mx-auto">
+            Our advanced multi-spectral sensing platform ensures accurate readings for everyone, regardless of skin tone.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          {[
+            {
+              icon: Wand2,
+              title: "Dual-Spectral Analysis",
+              desc: "Traditional red and infrared light measurement combined with our advanced calibration system for superior accuracy"
+            },
+            {
+              icon: Layers,
+              title: "Optical Skin Tone Recognition",
+              desc: "Dedicated optical sensor utilizing the Munsell value scale to deliver precise and consistent skin tone classification"
+            },
+            {
+              icon: Sparkles,
+              title: "Advanced Color Perception",
+              desc: "Harnessing Munsell's perceptually uniform color space to achieve consistent measurements across all skin tones"
+            }
+          ].map((feature, i) => (
+            <Card key={i} className="bg-white/80 backdrop-blur hover:shadow-lg transition-all duration-300 border-none">
+              <div className="p-6">
+                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                  <feature.icon className="h-6 w-6 text-black" />
+                </div>
+                <h3 className="text-xl font-semibold text-black mb-2">{feature.title}</h3>
+                <p className="text-black">{feature.desc}</p>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <div className="max-w-3xl mx-auto text-center">
+        <Card className="bg-black text-white">
+            <div className="p-8">
+              <h3 className="text-3xl font-bold mb-4">Pre-order Now</h3>
+              <p className="text-lg mb-6 opacity-90">
+                Join the medical revolution and be among the first to provide equitable care with our breakthrough technology.
+              </p>
+              <Button 
+                className="bg-white text-black hover:bg-gray-100 text-lg px-8 py-6 rounded-full"
+                onClick={() => {
+                  track('button_click', {
+                    button: 'reserve_yours'
+                  });
+                  setShowNotLaunched(true);
+                }}
+              >
+                Reserve Yours Today
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
+  const handleDialogClose = () => {
+    setShowNotLaunched(false);
+    setCurrentPage(0);
+    scrollToTop();
+  };
+
   return (
-    <>
-      {checkoutStep === 0 ? <MainContent /> : <CheckoutPage />}
+    <div className="min-h-screen bg-white relative overflow-x-hidden">
+      <div className="fixed inset-0 w-full h-full min-h-screen">
+        <MosaicBackground />
+      </div>
+      
+      <div className="relative">
+        {currentPage === 0 ? <HomePage /> : <TechnologyPage />}
+      </div>
+
+      <PaymentDialog 
+        open={showNotLaunched}
+        onOpenChange={setShowNotLaunched}
+        onReturnHome={handleReturnHome}
+      />
       <Analytics />
-    </>
+    </div>
   );
 };
 
