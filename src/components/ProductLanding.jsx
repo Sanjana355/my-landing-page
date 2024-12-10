@@ -342,9 +342,6 @@ const ProductLanding = () => {
         <Card className="bg-black text-white">
             <div className="p-8">
               <h3 className="text-3xl font-bold mb-4">Pre-order Now</h3>
-              <p className="text-lg mb-6 opacity-90">
-                Join the medical revolution and be among the first to provide equitable care with our breakthrough technology.
-              </p>
               <Button 
                 className="bg-white text-black hover:bg-gray-100 text-lg px-8 py-6 rounded-full"
                 onClick={() => {
