@@ -323,7 +323,7 @@ const ProductLanding = () => {
             {
               icon: Sparkles,
               title: "Custom Calibration",
-              desc: "Proprietary algorithms dynamically adapt measurements based on real-time skin tone detection, ensuring optimal accuracy for every individual"
+              desc: "Our algorithms dynamically adapt measurements based on real-time skin tone detection, ensuring optimal accuracy for every individual"
             }
           ].map((feature, i) => (
             <Card key={i} className="bg-white/80 backdrop-blur hover:shadow-lg transition-all duration-300 border-none">
