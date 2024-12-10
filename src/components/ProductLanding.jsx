@@ -304,7 +304,7 @@ const ProductLanding = () => {
             </span>
           </h2>
           <p className="text-xl text-black max-w-2xl mx-auto">
-            Our advanced multi-spectral sensing platform ensures accurate readings for everyone, regardless of skin tone.
+            Our custom calibration integrated platform ensures accurate readings for everyone, regardless of skin tone.
           </p>
         </div>
 
