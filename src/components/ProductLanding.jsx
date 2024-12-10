@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Wand2, Layers } from 'lucide-react';
+import { Sparkles, Wand2, Layers, Settings2, LucideSettings2, Component } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 import { track } from '@vercel/analytics';
 
@@ -71,90 +71,38 @@ const MosaicBackground = () => {
   );
 };
 
-const PaymentDialog = ({ open, onOpenChange, onReturnHome }) => {
-  const [showWaitlist, setShowWaitlist] = useState(false);
-  const [formData, setFormData] = useState({
-    cardNumber: '',
-    expiry: '',
-    cvc: ''
-  });
-
+const PriorityDialog = ({ open, onOpenChange, onReturnHome }) => {
   useEffect(() => {
-    if (showWaitlist) {
+    if (open) {
       track('priority_list_shown');
     }
-  }, [showWaitlist]);
-
-  const handleInputChange = (e) => {
-    if (e.target.name === 'cardNumber') {
-      setShowWaitlist(true);
-    }
-  };
-
-  const resetDialog = () => {
-    setShowWaitlist(false);
-    setFormData({
-      cardNumber: '',
-      expiry: '',
-      cvc: ''
-    });
-  };
+  }, [open]);
 
   const handleClose = () => {
     onOpenChange(false);
-    setTimeout(resetDialog, 300);
     onReturnHome();
   };
 
   return (
     <Dialog 
       open={open} 
-      onOpenChange={(newOpen) => {
-        if (!newOpen) {
-          setTimeout(resetDialog, 300);
-        }
-        onOpenChange(newOpen);
-      }}
+      onOpenChange={onOpenChange}
     >
       <DialogContent className="sm:max-w-md">
-        {!showWaitlist ? (
-          <div className="p-6">
-            <h3 className="text-2xl font-bold mb-6 text-black">Complete Your Pre-order</h3>
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Card Number
-                  </label>
-                  <input
-                    type="text"
-                    name="cardNumber"
-                    placeholder="1234 5678 9012 3456"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-black focus:border-transparent"
-                    onChange={handleInputChange}
-                    autoFocus
-                  />
-                </div>
-              </div>
-            </div>
+        <div className="p-6">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Component className="h-8 w-8 text-black animate-spin-slow" />
           </div>
-        ) : (
-          <div className="p-6">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Sparkles className="h-8 w-8 text-black" />
-            </div>
-            <h3 className="text-2xl font-bold mb-4 text-center text-black">Join Our Priority List</h3>
-            <p className="text-black mb-6 text-center">
-              Be the first to experience our revolutionary pulse oximeter. We're currently finalizing FDA approval and preparing for production.
-            </p>
-            <Button 
-              className="w-full bg-black text-white hover:bg-gray-800"
-              onClick={handleClose}
-            >
-              Return to Homepage
-            </Button>
-          </div>
-        )}
+          <p className="text-black mb-6 text-center">
+            We're currently finalizing the design of our system
+          </p>
+          <Button 
+            className="w-full bg-black text-white hover:bg-gray-800"
+            onClick={handleClose}
+          >
+            Return to Homepage
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -231,7 +179,7 @@ const ProductLanding = () => {
     {
       stat: "3x",
       highlight: "Higher Risk",
-      desc: "Black patients are three times more likely to have their low oxygen levels missed by current devices"
+      desc: "Black patients are three times more likely to have their low oxygen levels missed"
     },
     {
       stat: "11.7%",
@@ -259,7 +207,7 @@ const ProductLanding = () => {
           >
             Precision for
             <div className="text-black">
-              Every Patient
+             Every Patient
             </div>
           </h1>
           <p 
@@ -270,7 +218,7 @@ const ProductLanding = () => {
               transition: 'all 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s'
             }}
           >
-            The first pulse oximeter designed to provide precise readings across all skin tones, eliminating bias in critical care monitoring.
+            A pulse oximeter designed to provide consistent accuracy across all skin tones, ensuring every patient receives the precise care they deserve
           </p>
           <Button 
             className="mt-8 bg-black text-white hover:bg-gray-800 text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
@@ -374,8 +322,8 @@ const ProductLanding = () => {
             },
             {
               icon: Sparkles,
-              title: "Advanced Color Perception",
-              desc: "Harnessing Munsell's perceptually uniform color space to achieve consistent measurements across all skin tones"
+              title: "Custom Calibration",
+              desc: "Proprietary algorithms dynamically adapt measurements based on real-time skin tone detection, ensuring optimal accuracy for every individual"
             }
           ].map((feature, i) => (
             <Card key={i} className="bg-white/80 backdrop-blur hover:shadow-lg transition-all duration-300 border-none">
@@ -431,7 +379,7 @@ const ProductLanding = () => {
         {currentPage === 0 ? <HomePage /> : <TechnologyPage />}
       </div>
 
-      <PaymentDialog 
+      <PriorityDialog 
         open={showNotLaunched}
         onOpenChange={setShowNotLaunched}
         onReturnHome={handleReturnHome}
